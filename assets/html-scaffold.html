@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<!--
+  旅行行程图册骨架（travel-guide-builder）。
+  用法：复制到 trips/<行程>/行程攻略.html，只改：① 文案板块 ② DAYS 数据 ③ arcs/airports
+  ④ gallery-data.js 路径。结构与 class 不要随意改名（渲染与移动样式依赖它们）。
+  完整契约见 skill references/03-html-contract.md。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行程图册</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/gallery/gallery-data.js"></script>
+<style>
+  :root{--paper:#f4f2ec;--card:#fff;--ink:#22302c;--sub:#66736e;--line:#e4dfd4;
+    --jade:#2e7d6b;--jade-soft:#e4f0ec;--sky:#3a7ca5;--sky-soft:#e7f0f5;--clay:#d08a3c;
+    --clay-soft:#faf0e1;--rose:#c2553d;--rose-soft:#fbe9e4;--slate:#4f6d7a;--slate-soft:#e9eff1;--gold:#b08900;--gold-soft:#f8f1dc}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--paper);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+  .hero{background:linear-gradient(125deg,#1d5b53,#2e7d6b 48%,#3a7ca5);color:#fff;border-radius:0 0 28px 28px;padding:46px 36px 34px;margin:0 -20px 26px}
+  .hero h1{font-size:30px;margin:10px 0}.hero .meta{font-size:14px;opacity:.95}
+  .chips{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:5px 13px;border-radius:30px;font-size:12.5px}
+  .countdown{background:#fff;border:1px solid #d6e6e0;border-radius:18px;padding:20px 24px;margin:22px 0;text-align:center}
+  .cd-main{font-size:18px;font-weight:800;margin:7px 0 12px}
+  .cd-units{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+  .cd-units span{background:#fff;border:1px solid var(--line);border-radius:13px;min-width:76px;padding:9px}
+  .cd-units b{font-size:27px;display:block;color:var(--jade)}
+  .daynav{position:sticky;top:0;z-index:700;display:flex;gap:6px;flex-wrap:wrap;padding:9px;background:rgba(246,243,237,.94);border-bottom:1px solid var(--line)}
+  .daynav a{font-size:12px;padding:4px 11px;border-radius:30px;border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none}
+  h2.sec{font-size:19px;margin:30px 0 14px;display:flex;gap:9px;align-items:center}
+  h2.sec::before{content:"";width:5px;height:20px;background:var(--jade);border-radius:3px}
+  /* flightline：固定列宽对齐 */
+  .flightline{display:flex;flex-direction:column;gap:10px}
+  .fleg{display:grid;grid-template-columns:104px 30px minmax(0,1fr);gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 18px}
+  .fdate{text-align:right;font-size:12.5px;font-weight:800;color:var(--sky);white-space:nowrap}
+  .fdate small{display:block;color:var(--sub);font-weight:600;font-size:10.5px}
+  .ficon{width:30px;height:30px;border-radius:50%;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center}
+  .frow{display:flex;align-items:center;gap:14px;flex-wrap:nowrap}
+  .fpt{font-size:17px;font-weight:800;width:104px;flex:none;white-space:nowrap}.fpt small{display:block;font-size:11px;color:var(--sub);font-weight:600}
+  .farrow{width:118px;flex:none;display:flex;gap:6px;align-items:center;color:var(--sky);font-size:12px;font-weight:800;white-space:nowrap}
+  .farrow i{flex:1;border-top:1.5px dashed currentColor}.farrow b{flex:none}
+  .fmeta{margin-left:auto;text-align:right;font-size:12px;font-weight:700;color:var(--slate);white-space:nowrap}
+  .map{height:360px;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:#e9eff1}.map.big{height:420px}
+  .pin{width:23px;height:23px;border-radius:50%;background:#fff;border:2.5px solid var(--c,var(--sky));display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;color:var(--c,var(--sky))}
+  .pin.air{border-radius:6px;background:var(--c);color:#fff;width:auto;padding:0 7px;height:21px;white-space:nowrap;line-height:21px}
+  .name-label{background:rgba(255,255,255,.92)!important;border:1px solid var(--line)!important;border-radius:7px!important;padding:1px 7px!important;font-weight:600;color:var(--ink)!important}
+  .name-label::before,.seg-label::before{display:none!important}
+  .seg-label{background:rgba(255,255,255,.88)!important;border-radius:20px!important;padding:0 8px!important;color:#5a5347!important;font-size:10.5px!important}
+  .day{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:22px}
+  .dhead{display:flex;gap:15px;align-items:center;padding:15px 22px;background:linear-gradient(90deg,#fbfaf6,#f3f7f5);border-bottom:1px solid var(--line)}
+  .dbadge{flex:none;width:54px;height:54px;border-radius:15px;background:var(--jade-soft);color:var(--jade);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800}
+  .dbadge b{font-size:21px}.dhead h3{font-size:17.5px}.dmeta{font-size:12.5px;color:var(--sub)}
+  .dstats{margin-left:auto;text-align:right;font-size:11.5px;color:var(--sub);white-space:nowrap}
+  .dbody{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr)}
+  .tl{padding:10px 20px 16px;border-right:1px solid var(--line)}
+  .ev{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .ev:last-child{border-bottom:none}
+  .ev .no{width:23px;height:23px;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;background:var(--ec,var(--sky-soft));color:var(--etc,var(--sky));margin-top:2px}
+  .ev .t{font-size:12px;font-weight:800;color:var(--etc,var(--sky))}.ev .x{font-size:13.8px}.ev .x .sub{display:block;font-size:12px;color:var(--sub)}
+  .ev.flight{--ec:var(--sky-soft);--etc:var(--sky)}.ev.drive{--ec:var(--clay-soft);--etc:var(--clay)}
+  .ev.walk{--ec:#eef0f2;--etc:#69717c}.ev.hike{--ec:var(--jade-soft);--etc:var(--jade)}
+  .ev.food{--ec:var(--rose-soft);--etc:var(--rose)}.ev.stay{--ec:var(--slate-soft);--etc:var(--slate)}
+  .dmap{padding:14px 16px;background:#fbfaf6;display:flex;flex-direction:column;gap:10px}.dmap .map{height:330px}
+  .g-btn{display:inline-flex;margin-left:6px;font-size:10.5px;font-weight:700;background:var(--gold-soft);color:var(--gold);border:1px solid #e6d7a8;border-radius:20px;padding:1px 9px;cursor:pointer;white-space:nowrap}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--jade-soft);color:var(--jade)}td:first-child{font-weight:700;white-space:nowrap}
+  /* 实拍弹窗 */
+  .gal-mask{position:fixed;inset:0;background:rgba(25,30,28,.62);display:none;align-items:center;justify-content:center;z-index:1100;padding:22px}
+  .gal-mask.show{display:flex}
+  .gal-modal{background:#faf7f1;width:980px;max-width:96vw;max-height:90vh;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .gal-head{display:flex;gap:12px;align-items:center;padding:14px 20px;background:#fff;border-bottom:1px solid var(--line)}
+  .gal-modal.viewing .gal-head h3{display:none}.gal-modal.viewing .gal-head{padding-left:108px}
+  .gal-x{margin-left:auto;border:none;background:#eee5d8;border-radius:50%;width:32px;height:32px;cursor:pointer}
+  .gal-grid{overflow:auto;padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .gal-grid img{width:100%;height:150px;object-fit:cover;border-radius:10px;cursor:pointer;border:1px solid var(--line);background:#eee}
+  .gal-view{display:none;flex:1;min-height:0;background:#1d211f;flex-direction:column}.gal-view.show{display:flex}
+  .gal-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:10px}
+  .gal-stage img{max-width:100%;max-height:62vh;border-radius:8px}
+  .gal-nav{position:absolute;top:50%;transform:translateY(-50%);border:none;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.88);font-size:19px;cursor:pointer}
+  .gal-prev{left:16px}.gal-next{right:16px}
+  .gal-back{position:absolute;top:12px;left:14px;border:none;background:rgba(255,255,255,.9);border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .gal-cap{padding:10px 20px 14px;background:#262b29;color:#e8e4da;font-size:12.5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .gal-cap a{color:#e9c879}
+  footer{text-align:center;color:var(--sub);font-size:11.5px;margin-top:40px}
+
+  @media (max-width:860px){.dbody{grid-template-columns:1fr}.tl{border-right:none;border-bottom:1px solid var(--line)}.dstats{display:none}}
+  /* ===== 手机竖屏：改这里时同步 references/03 第 5 节 ===== */
+  @media (max-width:640px){
+    .wrap{padding:0 12px 70px}.hero{margin:0 -12px 20px;padding:30px 18px 24px;border-radius:0 0 22px}.hero h1{font-size:22px}
+    .daynav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.daynav::-webkit-scrollbar{display:none}.daynav a{flex:none}.daynav .sep{display:none}
+    .fleg{display:flex;flex-direction:column;gap:9px;padding:12px 14px}.fdate{display:flex;gap:8px;text-align:left}.fdate small{display:inline}.ficon{display:none}
+    .frow{flex-wrap:wrap;gap:7px 10px}.fpt{width:auto;flex:0 0 auto;font-size:15px}.farrow{flex:1 1 72px;min-width:64px;width:auto}
+    .fmeta{flex-basis:100%;margin-left:0;text-align:left;color:var(--sub)}
+    .map{height:280px}.map.big{height:330px}.dmap .map{height:268px}
+    .seg-label{display:none!important}.name-label{font-size:9.5px!important;padding:0 4px!important}
+    .pin{width:20px;height:20px;font-size:10px}.pin.air{width:auto;height:19px;padding:0 6px;font-size:10px}
+    .day .dhead{padding:12px 15px;gap:11px}.dbadge{width:46px;height:46px}.dbadge b{font-size:18px}.dhead h3{font-size:15.5px}
+    .tl{padding:8px 15px 12px}.ev{grid-template-columns:30px 1fr;gap:8px}.ev .no{width:20px;height:20px;font-size:10px}.ev .x{font-size:13px}
+    .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}table{min-width:480px;font-size:12.5px}
+    .gal-mask,.ref-mask{padding:0}
+    .gal-modal,.ref-modal{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;border-radius:0}
+    .gal-grid{padding:12px;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:8px}.gal-grid img{height:116px}
+    .gal-stage{padding:46px 8px 8px}.gal-stage img{max-height:56vh}.gal-nav{width:38px;height:38px}.gal-prev{left:8px}.gal-next{right:8px}
+    .gal-modal.viewing .gal-head{padding-left:102px}.gal-cap{font-size:11.5px;padding:9px 14px 12px}
+    .ref-modal li,.ref-modal a{overflow-wrap:anywhere}
+  }
+  /* 版本切换：默认简洁版（只留时间轴文字），按钮展开详细版；选择存 localStorage */
+  .view-toolbar{display:flex;align-items:center;gap:12px;margin:18px 0 4px;flex-wrap:wrap}
+  .view-btn{border:1px solid var(--jade);background:var(--jade);color:#fff;border-radius:30px;padding:8px 20px;font-weight:800;font-size:13.5px;cursor:pointer}
+  body.simple .view-btn{background:#fff;color:var(--jade)}
+  .view-hint{font-size:12.5px;color:var(--sub)}
+  /* 简洁版隐藏清单按实际板块增删；.tail 包住逐日之后的所有附加板块 */
+  body.simple #sec-flight,body.simple .flightline,
+  body.simple #sec-overview,body.simple #overviewMap,body.simple .legend,body.simple .tail,
+  body.simple .dmap,body.simple .g-btn,body.simple .chips,body.simple .d-stay,body.simple .rb,body.simple .dstats{display:none!important}
+  body.simple .dbody{display:block}
+  body.simple .tl{border-right:none}
+  body.simple .daynav a:not([data-t^="d"]){display:none}
+
+</style>
+</head>
+<body class="simple">
+<div class="wrap">
+  <div class="view-toolbar">
+    <button id="viewToggle" class="view-btn" type="button">🗺️ 展开详细版</button>
+    <span class="view-hint" id="viewHint">简洁版：只保留每天的时间安排，其余已收起</span>
+  </div>
+  <script>(function(){try{if(localStorage.getItem('tripViewMode')==='detail')document.body.classList.remove('simple');}catch(e){}})();</script>
+  <header class="hero">
+    <div>DESTINATION</div>
+    <h1>标题</h1><div class="meta">日期 · 人数 · 时区</div>
+    <div class="chips"><span class="chip">标签</span></div>
+  </header>
+
+  <section class="countdown" id="cd">
+    <div class="cd-main" id="cdMain">--</div>
+    <div class="cd-units"><span><b id="cdD">--</b>天</span><span><b id="cdH">--</b>时</span><span><b id="cdM">--</b>分</span><span><b id="cdS">--</b>秒</span></div>
+  </section>
+
+  <h2 class="sec">航段总览</h2>
+  <div class="flightline" id="flightline"><!-- 可静态写，也可 JS 生成 --></div>
+
+  <h2 class="sec">全程航图</h2>
+  <div class="map big" id="overviewMap"></div>
+
+  <nav class="daynav" id="daynav"></nav>
+  <h2 class="sec">逐日行程（时间轴编号 ↔ 地图编号）</h2>
+  <div id="days"></div>
+
+  <!-- 后续板块照 references/03 第 2 节补：住宿/餐饮/红黑/预算/备选/专栏/行前/应急 -->
+
+  <div class="gal-mask" id="galMask"><div class="gal-modal">
+    <div class="gal-head"><h3 id="galTitle"></h3><span id="galCount"></span><button class="gal-x" id="galClose">✕</button></div>
+    <div class="gal-grid" id="galGrid"></div>
+    <div class="gal-view" id="galView">
+      <button class="gal-back" id="galBack">← 返回图集</button>
+      <div class="gal-stage"><button class="gal-nav gal-prev" id="galPrev">‹</button><img id="galImg" alt=""><button class="gal-nav gal-next" id="galNext">›</button></div>
+      <div class="gal-cap"><span id="galCapText"></span><a id="galSrc" href="#" target="_blank" rel="noopener">查看原笔记 ↗</a><span id="galIdx"></span></div>
+    </div>
+  </div></div>
+
+  <footer>个人旅行自用 · 请勿转载 · 禁止商用</footer>
+</div>
+
+<script>
+const IS_MOBILE=Math.min(window.innerWidth,document.documentElement.clientWidth)<=640;
+document.querySelectorAll('table').forEach(t=>{if(t.parentElement?.classList.contains('table-scroll'))return;const w=document.createElement('div');w.className='table-scroll';t.parentNode.insertBefore(w,t);w.appendChild(t);});
+
+/* —— 数据：按 references/03 第 3 节 schema 填写 —— */
+const C={flight:'#3a7ca5',drive:'#d08a3c',walk:'#8a8f98',hike:'#2e7d6b',food:'#c2553d',stay:'#4f6d7a',rose:'#c2553d',gather:'#b08d3e'};
+const TYPE_LABEL={flight:'飞行',drive:'车程',walk:'步行',hike:'徒步',food:'餐饮',stay:'住宿'};
+const DAYS=[]; /* {id,date,title,stat,level,labels,fitStops,stops:[{t,n,lat,lng,type,dir,toff}],legs:[{a,b,mode,d,lo}],ev:[[type,time,title,sub,galKey]]} */
+
+function addBaseLayers(m){
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'Esri'}).addTo(m);
+}
+function mid(a,b){return L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2)}
+function styleFor(mode){return {color:C[mode]||C.walk,weight:2.5,dashArray:mode==='flight'?'7,7':mode==='hike'?'6,5':'2,5'}}
+function buildDayMap(d){
+  window.__maps=window.__maps||[];
+  const map=L.map('map'+d.id,{scrollWheelZoom:false,attributionControl:false});window.__maps.push(map);addBaseLayers(map);const bounds=[];
+  d.legs.forEach(leg=>{const A=d.stops[leg.a],B=d.stops[leg.b];
+    L.polyline([[A.lat,A.lng],[B.lat,B.lng]],styleFor(leg.mode)).addTo(map);
+    if(leg.d&&!leg.hideLabel){let lp=mid(A,B);if(leg.lo)lp=L.latLng(lp.lat+(leg.lo.dlat||0),lp.lng+(leg.lo.dlng||0));
+      L.marker(lp,{interactive:false,icon:L.divIcon({className:''})}).bindTooltip(leg.d,{permanent:true,direction:'center',className:'seg-label'}).addTo(map);}});
+  d.stops.forEach((s,i)=>{if(!d.fitStops||d.fitStops.includes(i))bounds.push([s.lat,s.lng]);
+    const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'',html:`<div class="pin" style="--c:${C[s.type]}">${i+1}</div>`,iconSize:[23,23],iconAnchor:[11.5,11.5]})}).addTo(map);
+    if(!s.hideName)m.bindTooltip(d.labels==='permanent'?s.n:`${s.t} ${s.n}`,{direction:s.dir||'top',offset:s.toff||[0,-13],className:'name-label',permanent:d.labels==='permanent'&&!IS_MOBILE});});
+  map.fitBounds(bounds,{padding:IS_MOBILE?[32,32]:[50,50]});
+  map.__fit={bounds,opts:{padding:IS_MOBILE?[32,32]:[50,50]}};
+}
+function renderDays(){
+  const host=document.getElementById('days'),nav=document.getElementById('daynav');
+  host.innerHTML=DAYS.map(d=>`
+    <section class="day" id="d${d.id}">
+      <div class="dhead"><div class="dbadge"><small>DAY</small><b>${d.id}</b></div>
+        <div><h3>${d.title}</h3><div class="dmeta">${d.date} · 强度 ${d.level} · ${d.stat||''}</div></div></div>
+      <div class="dbody">
+        <div class="tl">${d.ev.map((e,i)=>`
+          <div class="ev ${e[0]}"><div class="no">${i+1}</div><div>
+            <div class="t">${e[1]} · ${TYPE_LABEL[e[0]]||e[0]}${e[4]&&window.GALLERY&&window.GALLERY[e[4]]?`<button class="g-btn" data-gal="${e[4]}">实拍 ${window.GALLERY[e[4]].items.length}</button>`:''}</div>
+            <div class="x">${e[2]}${e[3]?`<span class="sub">${e[3]}</span>`:''}</div></div></div>`).join('')}
+        </div>
+        <div class="dmap"><div class="map" id="map${d.id}"></div></div>
+      </div></section>`).join('');
+  nav.innerHTML=DAYS.map(d=>`<a href="#d${d.id}">D${d.id}</a>`).join('');
+  setTimeout(()=>DAYS.forEach(buildDayMap),60);
+}
+renderDays();
+
+/* 倒计时：改 T0/T1 与三阶段文案 */
+(function(){const T0=Date.UTC(2026,9,1,0,0,0)-8*3600e3,T1=Date.UTC(2026,9,10,0,0,0)-8*3600e3,$=id=>document.getElementById(id);
+ const p2=n=>String(n).padStart(2,'0');
+ function tick(){const now=Date.now(),x=(ms)=>{ms=Math.max(0,ms);return[d=Math.floor(ms/864e5),h=Math.floor(ms/36e5)%24,m=Math.floor(ms/6e4)%60,s=Math.floor(ms/1e3)%60]};
+   let t;if(now<T0){$('cdMain').textContent='出发前文案';t=x(T0-now)}else if(now<T1){$('cdMain').textContent='旅途中文案';t=x(now-T0)}else{$('cdMain').textContent='结束后文案';t=x(now-T1)}
+   $('cdD').textContent=p2(t[0]);$('cdH').textContent=p2(t[1]);$('cdM').textContent=p2(t[2]);$('cdS').textContent=p2(t[3]);}
+ tick();setInterval(tick,1000);})();
+
+/* 实拍弹窗：宫格缩略图 → 大图原图，两级加载 */
+(function(){
+ const mask=document.getElementById('galMask'),grid=document.getElementById('galGrid'),view=document.getElementById('galView'),
+       gImg=document.getElementById('galImg'),gCap=document.getElementById('galCapText'),gSrc=document.getElementById('galSrc'),
+       gIdx=document.getElementById('galIdx'),gTitle=document.getElementById('galTitle'),gCount=document.getElementById('galCount'),
+       modal=mask.querySelector('.gal-modal');
+ let cur=[],pos=0;
+ const showGrid=()=>{view.classList.remove('show');grid.style.display='grid';modal.classList.remove('viewing');};
+ const openViewer=i=>{pos=i;const it=cur[i];gImg.src=it.src;gCap.textContent=it.cap||'';gSrc.href=it.url||'#';gIdx.textContent=`${i+1} / ${cur.length}`;grid.style.display='none';view.classList.add('show');modal.classList.add('viewing');};
+ window.openGallery=key=>{const g=window.GALLERY&&window.GALLERY[key];if(!g||!g.items.length)return;cur=g.items;gTitle.textContent=g.title;gCount.textContent=`${cur.length} 张 · 点击看大图`;
+   grid.innerHTML=cur.map((it,i)=>{const th=it.src.replace(/\.webp$/,'.th.webp');
+     return `<img loading="eager" decoding="async" fetchpriority="high" src="${th}" data-full="${it.src}" onerror="this.onerror=null;this.src=this.dataset.full" data-i="${i}" alt="${it.cap||''}">`;}).join('');
+   showGrid();mask.classList.add('show');};
+ const step=d=>openViewer((pos+d+cur.length)%cur.length);
+ grid.addEventListener('click',e=>{if(e.target.dataset.i)openViewer(+e.target.dataset.i);});
+ document.getElementById('galClose').addEventListener('click',()=>mask.classList.remove('show'));
+ document.getElementById('galBack').addEventListener('click',showGrid);
+ document.getElementById('galPrev').addEventListener('click',()=>step(-1));
+ document.getElementById('galNext').addEventListener('click',()=>step(1));
+ mask.addEventListener('click',e=>{if(e.target===mask)mask.classList.remove('show');});
+ document.addEventListener('keydown',e=>{if(!mask.classList.contains('show'))return;if(e.key==='Escape'){view.classList.contains('show')?showGrid():mask.classList.remove('show');}if(e.key==='ArrowLeft')step(-1);if(e.key==='ArrowRight')step(1);});
+ document.addEventListener('click',e=>{const b=e.target.closest('.g-btn');if(b&&b.dataset.gal){e.preventDefault();window.openGallery(b.dataset.gal);}});
+})();
+
+/* 简洁/详细切换：默认简洁；展开时隐藏容器里初始化的地图要 invalidateSize+fitBounds 重绘 */
+(function(){
+ const KEY='tripViewMode',btn=document.getElementById('viewToggle'),hint=document.getElementById('viewHint');
+ function apply(mode){const simple=mode!=='detail';document.body.classList.toggle('simple',simple);
+   btn.textContent=simple?'🗺️ 展开详细版':'📝 返回简洁版';
+   hint.textContent=simple?'简洁版：只保留每天的时间安排，其余已收起':'详细版：全部板块展开';
+   try{localStorage.setItem(KEY,simple?'simple':'detail');}catch(e){}
+   if(!simple)[60,260,600].forEach(d=>setTimeout(()=>{(window.__maps||[]).forEach(m=>{try{m.invalidateSize();if(m.__fit)m.fitBounds(m.__fit.bounds,m.__fit.opts);}catch(e){}});},d));}
+ apply(document.body.classList.contains('simple')?'simple':'detail');
+ btn.addEventListener('click',()=>apply(document.body.classList.contains('simple')?'detail':'simple'));
+})();
+</script>
+</body>
+</html>
