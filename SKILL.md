@@ -1,6 +1,6 @@
 ---
 name: travel-guide-builder
-description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事攻略文档（红榜经验与避坑）与公开渠道（小红书模拟人工浏览采集实拍与口碑、公开搜索核验事实），完成需求澄清、双源调研、逐日行程排程（交通/住宿/餐饮/时间轴/多方案），产出 Markdown 攻略与单文件自包含 HTML 行程图册（Leaflet 航图与逐日小地图、时间轴编号与地图对应、实拍图集点击弹窗、航段总览、红黑榜、备选方案、重点项目专栏、风险应急、启程倒计时），住宿通过授权 MCP（Trivago/Airbnb 等）采集报价与高评民宿、产出只读的酒店/民宿选型页，并支持版本备份与扁平化全英文 URL 的 GitHub Pages 发布。当用户要做旅游/出行/自由行行程规划、旅行攻略文档或 HTML 行程图册、沉淀同事旅游红黑经验、采集小红书旅行实拍/评论、或迭代已有 travel-books 类行程工程时使用。
+description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事攻略文档（红榜经验与避坑）与公开渠道（小红书模拟人工浏览采集实拍与口碑、公开搜索核验事实），完成需求澄清、双源调研、逐日行程排程（交通/住宿/餐饮/时间轴/多方案），产出 Markdown 攻略与单文件自包含 HTML 行程图册（默认简洁版/一键切详细版、Leaflet 航图与逐日小地图、区域总览海报、时间轴编号与地图对应、实拍图集点击弹窗、航段总览、红黑榜、备选方案、重点项目专栏、本地实用信息、预定专栏、风险应急、启程倒计时），住宿通过授权 MCP（Trivago/Airbnb 等）采集报价与高评民宿、产出只读的酒店/民宿选型页，并支持版本备份与扁平化全英文 URL 的 GitHub Pages 发布。当用户要做旅游/出行/自由行行程规划、旅行攻略文档或 HTML 行程图册、沉淀同事旅游红黑经验、采集小红书旅行实拍/评论、或迭代已有 travel-books 类行程工程时使用。
 ---
 
 # Travel Guide Builder · 旅行攻略工程化生产
@@ -64,13 +64,15 @@ description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事
 见 `references/02-itinerary-method.md`。关键数字（时间/距离/价格）必须来自素材或可复现计算，距离用工具算，不口算。
 
 ### 阶段 4 · 实拍图库（双 AI Gate，产出 assets/）
-按「点位关键词专搜 → Gate-1 审帖强相关 → Gate-2 逐张审图强关联 → 入库」执行，
+按「点位关键词专搜 → Gate-1 审帖强相关 → Gate-2 联系表逐张审图强关联 → 入库」执行，
 每点位目标 10 张、不足如实告知，**严禁跨点位挪用、泛菜品/泛地貌凑数、人脸大头/视频截图**。
-判据、目录约定、构建脚本用法见 `references/01` 第 3 节与 `scripts/build_gallery.py`。
+主图统一压到长边 1280/q70、缩略图 480/q62；补新点位用 `--merge` 增量合并不动旧 key。
+判据、防风控实操（xsec_token/300017/联系表/签名过期）、目录约定、构建脚本用法见 `references/01` 与 `scripts/build_gallery.py`。
 
 ### 阶段 5 · HTML 图册（单文件、粗中有细）
 组件契约、DAYS 数据 schema、样式与文案规范见 `references/03-html-contract.md`，
 起步骨架直接复制 `assets/html-scaffold.html`。紧凑主视图 + 点击弹窗看细节（实拍/链接/专栏）；默认简洁版、按钮切详细版。
+相距远的多区域目的地，另做**区域总览海报**（poster.html 流水线、固定视口渲染、压 JPG 嵌入简洁版逐日上方），机制与样板见 `references/06-overview-poster.md`、`assets/poster-scaffold.html`。
 需要订房决策时另建**只读**住宿选型页（酒店/民宿两组），采集通道与页面契约见 `references/05-lodging-acquisition.md`，样板 `assets/hotel-picker.html`。
 
 ### 阶段 6 · 验证（每轮必做，不过不交付）
@@ -112,6 +114,8 @@ description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事
 - `references/03-html-contract.md`：单文件 HTML 组件清单、DAYS/arcs/GALLERY 数据契约、样式与弹窗规范。
 - `references/04-verify-release.md`：浏览器验证清单、vN 快照做法、扁平英文结构的 git/GitHub Pages 发布命令与回滚。
 - `references/05-lodging-acquisition.md`：住宿 MCP 采集通道（Trivago/Airbnb/Trip/Booking/小红书）、防串店、只读住宿选型页契约。
+- `references/06-overview-poster.md`：区域总览海报流水线（多区域拆图、1500×1050 版面契约、固定视口渲染、压缩嵌入简洁版、防重叠与一致性检查）。
 - `assets/html-scaffold.html`：图册起步骨架（复制后填数据）。
+- `assets/poster-scaffold.html`：海报起步骨架（两套示例数据 + ?r= 切换，复制后整体替换 DATA）。
 - `assets/hotel-picker.html`：只读住宿选型页样板（酒店/民宿两组，复制为 `hotels/index.html` 后填数据）。
-- `scripts/build_gallery.py`：通用图库构建（精选清单 → 复制图片 + provenance.json + gallery-data.js）。
+- `scripts/build_gallery.py`：通用图库构建（精选清单 → 压缩主图+缩略图 + provenance.json + gallery-data.js；`--merge` 增量补点）。

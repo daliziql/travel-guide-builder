@@ -7,7 +7,8 @@
    - 图集键全命中：每个事件 e[4] 都能在 window.GALLERY 找到；
    - `bu.console_messages()` 为 0 error；
    - 窄屏溢出审计：遍历 `.wrap *`，`getBoundingClientRect().right > clientWidth+1.5` 的元素列出（排除 leaflet 瓦片、横滑导航、table-scroll 内部表）。
-3. 截图目检关键区：首屏、航段总览、一日时间轴+小地图、实拍宫格、大图态、表格、弹窗；桌面宽度（≥1024）也要回归一张，确认媒体查询没误伤。
+3. 截图目检关键区：首屏、航段总览、一日时间轴+小地图、实拍宫格、大图态、表格、弹窗、简洁版海报（无裁切/不横滑）；桌面宽度（≥1024）也要回归一张，确认媒体查询没误伤。
+   海报另按 references/06 的固定视口流程重渲染：行程一改，海报 routes/seq/cards 必须同步，不允许新旧并存。
 4. 线上发布后：curl 关键资源状态码/体积，再用浏览器开线上 URL 实测一次（file:// 过 ≠ 公网过）。
 
 ### 移动视口模拟注意
@@ -25,7 +26,10 @@ cp -R assets/<gallery> assets/<gallery>_vN
 ```
 
 ## 3. GitHub Pages 发布（扁平 + 全英文 URL）
-工程只发布最新版；raw/、backup/、_cand/ 候选图、.DS_Store、__pycache__ 进 .gitignore。
+工程只发布最新版；raw/、backup/、_cand/ 候选图、posters/ 源文件（poster.html、全尺寸 PNG）、.DS_Store、__pycache__ 进 .gitignore。
+
+**提交白名单（别习惯性 git add -A）**：只 add 主页面（index.html / hotels/index.html）、assets/（图库 + 压缩海报 JPG，如 assets/posters/）、
+需要随仓走的 tools 脚本；海报源 PNG/源 HTML、raw 采集素材、联系表、备份一律不进仓（本地存档即可）。
 
 **本地工程结构（trips 多行程机制）与发布仓结构是两回事**：本地可继续用 `trips/<行程>/` 组织多份攻略；
 但对外发布仓要**扁平化、URL 全英文、无中文、无 trips 多层嵌套**：

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Overview Poster Scaffold（复制后替换 DATA）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#dfe5e6;font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  /* 固定画布：CDP 定 1500×1050 视口后截图即为全幅海报 */
+  #poster{position:relative;width:1500px;height:1050px;overflow:hidden;background:#e7edee}
+  #map{position:absolute;inset:0;background:#e7edee;z-index:1}
+  .leaflet-container{background:#e7edee}
+  .ov{position:absolute;pointer-events:none;z-index:1000}
+  #titleBox{top:20px;left:20px;width:348px;background:rgba(255,255,255,.94);border:1px solid #d6d2c6;border-radius:12px;
+            padding:12px 14px;box-shadow:0 2px 10px rgba(60,70,70,.12)}
+  #titleBox h1{font-size:25px;color:#23302b;letter-spacing:.5px;line-height:1.2}
+  #titleBox .sub{font-size:13px;color:#6a7268;margin-top:5px;line-height:1.45}
+  #legend{top:152px;left:20px;width:348px;background:rgba(255,255,255,.94);border:1px solid #d6d2c6;border-radius:12px;
+          padding:10px 14px;box-shadow:0 2px 10px rgba(60,70,70,.12);font-size:12.5px;color:#414942}
+  #legend .lg-t{font-weight:800;font-size:12px;color:#23302b;margin-bottom:5px;letter-spacing:1px}
+  #legend .row{display:flex;align-items:center;gap:7px;margin:3.5px 0}
+  #legend .dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;box-shadow:0 0 0 1px #c9c3b4}
+  #legend .star{width:14px;height:14px;background:#d23b32;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  #legend .ln{width:24px;height:0;border-top-width:3px;border-top-style:solid;flex:0 0 auto}
+  #compass{top:22px;right:360px;width:46px;height:46px}
+  /* 右侧卡片列：6-8 张为上限，超出会挤出画布 */
+  #cards{top:18px;right:16px;width:396px;display:flex;flex-direction:column;gap:6px}
+  .card{background:rgba(255,255,255,.95);border:1px solid #d9d4c8;border-left-width:5px;border-radius:11px;padding:7px 11px;
+        box-shadow:0 2px 8px rgba(60,70,70,.10)}
+  .card .hd{display:flex;align-items:baseline;gap:7px}
+  .card .nm{font-size:16px;font-weight:800;color:#25302b}
+  .card .en{font-size:11.5px;color:#8a9088;font-weight:600}
+  .card .tag{font-size:12.5px;color:#b06a2c;font-weight:700;margin:1px 0 3px}
+  .card .bd{display:flex;gap:9px}
+  .card .imgs{display:flex;gap:5px;flex:0 0 auto}
+  .card .imgs img{width:68px;height:50px;object-fit:cover;border-radius:6px;border:1px solid #e3ded2;background:#eee}
+  .card ul{list-style:none;flex:1;font-size:12.5px;color:#434b44;line-height:1.32}
+  .card ul li{margin-bottom:1px;padding-left:9px;position:relative}
+  .card ul li::before{content:"";position:absolute;left:0;top:6px;width:4.5px;height:4.5px;border-radius:50%;background:#b7b0a0}
+  #route{left:20px;bottom:20px;width:380px;background:rgba(255,255,255,.95);border:1px solid #d6d2c6;border-radius:12px;
+         padding:10px 14px;box-shadow:0 2px 10px rgba(60,70,70,.12)}
+  #route .rt{font-weight:800;font-size:13px;color:#23302b;margin-bottom:5px}
+  #route .seq{font-size:12px;color:#3f4740;line-height:1.7}
+  #route .seq b{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;
+               color:#fff;font-size:10px;margin:0 2px}
+  #route .meta{display:flex;gap:16px;margin-top:7px;padding-top:7px;border-top:1px dashed #cfc9ba;font-size:11.5px;color:#5d655d}
+  .mk{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;
+      font-weight:800;font-size:15.5px;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35);font-family:Arial}
+  .mk.base{width:34px;height:34px;background:#d23b32;font-size:17px;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border:none;border-radius:0}
+  .pname{background:rgba(255,255,255,.9)!important;border:1px solid #cfc9ba!important;border-radius:6px!important;
+         padding:1px 7px!important;font-size:12.5px!important;font-weight:700;color:#2c3530!important;box-shadow:none!important;white-space:nowrap}
+  .pname::before{display:none!important}
+  .leaflet-control-attribution{font-size:8.5px;background:rgba(255,255,255,.65)!important}
+  .leaflet-control-scale-line{font-size:9px;background:rgba(255,255,255,.75)}
+</style>
+</head>
+<body>
+<div id="poster">
+  <div id="map"></div>
+  <div class="ov" id="titleBox"><h1 id="tTitle"></h1><div class="sub" id="tSub"></div></div>
+  <svg class="ov" id="compass" viewBox="0 0 46 46">
+    <circle cx="23" cy="23" r="21" fill="rgba(255,255,255,.92)" stroke="#c9c3b4"/>
+    <polygon points="23,7 28,24 23,20 18,24" fill="#d23b32"/>
+    <polygon points="23,39 28,24 23,28 18,24" fill="#5a6460"/>
+    <text x="23" y="5.5" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3530" font-family="Arial">N</text>
+  </svg>
+  <div class="ov" id="legend"></div>
+  <div class="ov" id="cards"></div>
+  <div class="ov" id="route"></div>
+</div>
+<script>
+/* ===== 复制后只改这里：G 指向本行程图库根；?r=regionA|regionB 切区域 ===== */
+const G="../assets/gallery2/";
+/* 语义色：base 大本营 / orange 主线 / purple·green 主题线 / blue 旧线 / gray 备选 */
+const COL={base:"#d23b32",orange:"#e07b2f",purple:"#8e5bb0",green:"#2e9e6b",blue:"#2f6fb0",gray:"#8d9396"};
+const imgs=(k,n=2)=>Array.from({length:n},(_,i)=>`${G}${k}/${k}_0${i+1}.th.webp`);
+
+const DATA={
+regionA:{
+  title:"【区域A】必游景点地图",
+  sub:"【一句话讲清这片区域的结构与玩法】",
+  bounds:[[42.90,76.70],[43.55,79.55]],          // [西南角],[东北角]，东侧给右卡列留余量
+  pad:[78,24], padBR:[420,118],
+  points:[
+    {id:1,lat:43.25,lng:76.95,name:"Base City",base:true,la:[26,6]},
+    {id:2,lat:43.12,lng:77.13,name:"Point Two",c:"purple"},
+    {id:3,lat:43.30,lng:79.20,name:"Point Three",c:"orange",mk:[0.02,0.02]} // 近邻点用 mk 视觉错位
+  ],
+  routes:[
+    {pts:[1,2,1],c:"purple",dash:"2,7"},
+    {pts:[1,3,1],c:"orange",dash:null}
+  ],
+  legend:[
+    ["star","","大本营城市（住宿落点 / 步行圈）"],
+    ["dot",COL.orange,"主线（跟团 / 包车）"],
+    ["ln-orange","","实线去程 · 虚线返程 / 半日往返"]
+  ],
+  cards:[
+    {id:1,c:"base",nm:"大本营",en:"Base City",tag:"全程住这里、寄存大件",
+     imgs:[], tips:["卡片 tips 只写 2-3 条短句","同类只留最值得的一个","缺图就留空数组，不要借图"]},
+    {id:2,c:"purple",nm:"点位二",en:"Point Two",tag:"半日主题线",
+     imgs:[/* 需要缩略图时：...imgs("你的图库key",1)，图不存在会自动隐藏 */], tips:["贴士一","贴士二"]},
+    {id:"3·4",c:"orange",nm:"相邻小点可合并卡片",en:"Three & Four",tag:"id 可写 '3·4'",
+     imgs:[], tips:["右栏 6-8 张为上限"]}
+  ],
+  seq:[
+    {t:"D1 示例线",pts:[1,3,1],c:COL.orange}
+  ],
+  meta:[["总车程","按工具实测填"],["建议时长","N 天"]]
+},
+regionB:{
+  title:"【区域B】必游景点地图",
+  sub:"【远距离区域单独一张】",
+  bounds:[[42.85,50.85],[44.75,54.35]],
+  pad:[78,24], padBR:[420,118],
+  points:[
+    {id:1,lat:43.66,lng:51.16,name:"Base City",base:true},
+    {id:2,lat:43.15,lng:53.35,name:"Main Spot",c:"orange"},
+    {id:3,lat:44.53,lng:51.81,name:"Alt Spot（备选）",c:"gray"}
+  ],
+  routes:[
+    {pts:[1,2,1],c:"orange",dash:null},
+    {pts:[1,3,1],c:"gray",dash:"4,7"}
+  ],
+  legend:[
+    ["star","","大本营城市"],
+    ["dot",COL.orange,"主推线路"],
+    ["dot",COL.gray,"备选（升级团型 / 加一天才去）"]
+  ],
+  cards:[
+    {id:1,c:"base",nm:"大本营",en:"Base",tag:"两线共同补给点",imgs:[],tips:["示例"]},
+    {id:2,c:"orange",nm:"主推点",en:"Main Spot",tag:"全程高光",imgs:[],tips:["示例"]},
+    {id:3,c:"gray",nm:"备选点",en:"Alt Spot",tag:"只在升级团时经过",imgs:[],tips:["灰色呈现降级感"]}
+  ],
+  seq:[
+    {t:"主推",pts:[1,2,1],c:COL.orange},
+    {t:"备选",pts:[1,3,1],c:COL.gray}
+  ],
+  meta:[["往返里程","工具实测"],["团费","已查证来源"]]
+}
+};
+
+const r=new URLSearchParams(location.search).get('r')||'regionA';
+const D=DATA[r]||DATA.regionA;
+document.getElementById('tTitle').textContent=D.title;
+document.getElementById('tSub').textContent=D.sub;
+
+document.getElementById('legend').innerHTML='<div class="lg-t">图 例 LEGEND</div>'+D.legend.map(l=>{
+  if(l[0]==='star')return `<div class="row"><span class="star"></span>${l[2]}</div>`;
+  if(l[0]==='dot')return `<div class="row"><span class="dot" style="background:${l[1]}"></span>${l[2]}</div>`;
+  if(l[0]&&l[0].startsWith('ln')){const c=l[0]==='ln-blue'?COL.blue:(l[0]==='ln-gray'?COL.gray:COL.orange);return `<div class="row"><span class="ln" style="border-top-color:${c}"></span>${l[2]}</div>`;}
+  return `<div class="row" style="color:#8a9088">${l[2]}</div>`;
+}).join('');
+
+document.getElementById('cards').innerHTML=D.cards.map(cd=>`
+  <div class="card" style="border-left-color:${COL[cd.c]||cd.c}">
+    <div class="hd"><span style="color:${COL[cd.c]||cd.c};font-weight:800;font-size:17px">${cd.id}</span>
+      <span class="nm">${cd.nm}</span><span class="en">${cd.en}</span></div>
+    <div class="tag">${cd.tag}</div>
+    <div class="bd"><div class="imgs">${cd.imgs.map(s=>`<img loading="eager" src="${s}" onerror="this.style.display='none'">`).join('')}</div>
+      <ul>${cd.tips.map(t=>`<li>${t}</li>`).join('')}</ul></div>
+  </div>`).join('');
+
+document.getElementById('route').innerHTML='<div class="rt">推荐游玩路线</div>'+
+  D.seq.map(s=>`<div class="seq">${s.t}：${s.pts.map((p,i)=>`<b style="background:${s.c}">${p}</b>${i<s.pts.length-1?'<span style="color:#9aa098"> → </span>':''}`).join('')}</div>`).join('')+
+  `<div class="meta">${D.meta.map(m=>`<span>🚗 ${m[0]}：${m[1]}</span>`).join('')}<span>🧭 地理校准坐标</span></div>`;
+
+const map=L.map('map',{zoomControl:false,attributionControl:true,zoomSnap:.25,zoomDelta:.25});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{
+  maxZoom:16,attribution:'Esri · 路线为示意标注'}).addTo(map);
+L.control.scale({metric:true,imperial:false,position:'bottomright'}).addTo(map);
+const P={};
+D.points.forEach(p=>{P[p.id]=[p.lat,p.lng];});
+D.routes.forEach(rt=>{
+  L.polyline(rt.pts.map(i=>P[i]),{color:COL[rt.c]||rt.c,weight:3.5,dashArray:rt.dash||null,opacity:.9,lineJoin:'round'}).addTo(map);
+});
+/* 每个 id 的标签方位：默认右侧；密集处在这逐个改成 top/bottom/left 直到不压字 */
+const LABELPOS={
+  regionA:{},
+  regionB:{}
+};
+D.points.forEach(p=>{
+  const pos=[p.lat+(p.mk?p.mk[0]:0),p.lng+(p.mk?p.mk[1]:0)];
+  let m;
+  if(p.base){
+    m=L.marker(pos,{icon:L.divIcon({className:'',html:`<div class="mk base">★</div>`,iconSize:[34,34],iconAnchor:[17,17]}),interactive:false,zIndexOffset:1000});
+  }else{
+    m=L.marker(pos,{icon:L.divIcon({className:'',html:`<div class="mk" style="background:${COL[p.c]}">${p.id}</div>`,iconSize:[32,32],iconAnchor:[16,16]}),interactive:false});
+  }
+  const lp=(LABELPOS[r]&&LABELPOS[r][p.id])||["right",[13,0]];
+  m.bindTooltip(p.name,{permanent:true,direction:lp[0],offset:L.point(lp[1][0],lp[1][1]),className:'pname',interactive:false});
+  m.addTo(map);
+});
+map.fitBounds(D.bounds,{paddingTopLeft:D.pad,paddingBottomRight:D.padBR||[20,20]});
+window.__ready=true;
+</script>
+</body>
+</html>

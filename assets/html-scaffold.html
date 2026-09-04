@@ -121,6 +121,11 @@
   body.simple .dbody{display:block}
   body.simple .tl{border-right:none}
   body.simple .daynav a:not([data-t^="d"]){display:none}
+  /* 区域总览海报：简洁/详细都显示，多张上下堆叠，制作见 references/06 */
+  .posters{display:flex;flex-direction:column;gap:14px;margin:18px 0}
+  .posters figure{margin:0}
+  .posters img{width:100%;height:auto;border-radius:14px;border:1px solid var(--line);display:block}
+  .posters figcaption{font-size:12.5px;color:var(--sub);margin-top:6px}
 
 </style>
 </head>
@@ -149,10 +154,16 @@
   <div class="map big" id="overviewMap"></div>
 
   <nav class="daynav" id="daynav"></nav>
+  <!-- 区域总览海报（简洁/详细都保留；assets/posters 放压缩 JPG，一区域一张、上下堆叠） -->
+  <div class="posters">
+    <!-- <figure><img src="assets/posters/regionA-map.jpg" alt="区域A必游景点地图" loading="eager">
+      <figcaption>区域A：地理分布与推荐走法一句话</figcaption></figure> -->
+  </div>
   <h2 class="sec">逐日行程（时间轴编号 ↔ 地图编号）</h2>
   <div id="days"></div>
 
-  <!-- 后续板块照 references/03 第 2 节补：住宿/餐饮/红黑/预算/备选/专栏/行前/应急 -->
+  <!-- 详细版板块照 references/03 第 2 节补：住宿/餐饮/红黑/预算/本地实用信息/预定专栏/备选/兴趣专栏/应急；.tail 包住使简洁版整段隐藏 -->
+  <div class="tail"></div>
 
   <div class="gal-mask" id="galMask"><div class="gal-modal">
     <div class="gal-head"><h3 id="galTitle"></h3><span id="galCount"></span><button class="gal-x" id="galClose">✕</button></div>
