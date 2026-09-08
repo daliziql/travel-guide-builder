@@ -74,6 +74,7 @@ description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事
 起步骨架直接复制 `assets/html-scaffold.html`。紧凑主视图 + 点击弹窗看细节（实拍/链接/专栏）；默认简洁版、按钮切详细版。
 相距远的多区域目的地，另做**区域总览海报**（poster.html 流水线、固定视口渲染、压 JPG 嵌入简洁版逐日上方），机制与样板见 `references/06-overview-poster.md`、`assets/poster-scaffold.html`。
 需要订房决策时另建**只读**住宿选型页（酒店/民宿两组），采集通道与页面契约见 `references/05-lodging-acquisition.md`，样板 `assets/hotel-picker.html`。
+用户要深度人文内容（行记/历史/建筑/饮食源流）时另建 `stories/index.html` 人文手册子页：素材稿先对稿、实拍与 Commons 历史影像分区，流程见 `references/06-story-handbook.md`。
 
 ### 阶段 6 · 验证（每轮必做，不过不交付）
 在用户实际查看的浏览器 tab 上：重载页面 → 读 DOM/数据校验（每日事件、连线、图集键全部命中、0 console error）
@@ -114,6 +115,7 @@ description: 旅行攻略工程化生产与迭代。结合内网旅游群/同事
 - `references/03-html-contract.md`：单文件 HTML 组件清单、DAYS/arcs/GALLERY 数据契约、样式与弹窗规范。
 - `references/04-verify-release.md`：浏览器验证清单、vN 快照做法、扁平英文结构的 git/GitHub Pages 发布命令与回滚。
 - `references/05-lodging-acquisition.md`：住宿 MCP 采集通道（Trivago/Airbnb/Trip/Booking/小红书）、防串店、只读住宿选型页契约。
+- `references/06-story-handbook.md`：历史人文手册子页三步法（素材稿对稿 → 双图源补图：实拍+Commons 历史影像分区 → stories 子页生成验证发布）。
 - `references/06-overview-poster.md`：区域总览海报流水线（多区域拆图、1500×1050 版面契约、固定视口渲染、压缩嵌入简洁版、防重叠与一致性检查）。
 - `assets/html-scaffold.html`：图册起步骨架（复制后填数据）。
 - `assets/poster-scaffold.html`：海报起步骨架（两套示例数据 + ?r= 切换，复制后整体替换 DATA）。

@@ -42,17 +42,28 @@ def save_webp(src_path, out_path, edge, quality):
 
 
 def load_existing_js(js_path):
-    """从现有 gallery-data.js 还原 dict；不存在或损坏返回 {}。"""
+    """从现有 gallery-data.js 还原 dict；不存在或损坏返回 {}。
+    旧版产物可能是带不引号 key 的多行合法 JS（非合法 JSON），json 失败时用 node 兜底。"""
     if not os.path.exists(js_path):
         return {}
     txt = open(js_path, encoding="utf-8").read()
-    m = re.search(r"window\.GALLERY\s*=\s*(\{.*\})\s*;?\s*$", txt, re.S)
+    body = re.sub(r"^\s*/\*[\s\S]*?\*/", "", txt)  # 去头部注释
+    m = re.search(r"window\.GALLERY\s*=\s*(\{.*\})\s*;?\s*$", body, re.S)
     if not m:
         return {}
+    raw = m.group(1)
     try:
-        return json.loads(m.group(1))
+        return json.loads(raw)
     except json.JSONDecodeError:
-        return {}
+        import shutil, subprocess
+        if not shutil.which("node"):
+            print("WARN: 旧 gallery-data.js 非合法 JSON 且无 node 可解析，为防清空索引已中止合并")
+            raise SystemExit("请先将旧 js 规范化为合法 JSON，或安装 node 后重试 --merge")
+        node_code = "process.stdout.write(JSON.stringify(eval('('+process.argv[1]+')')))"
+        r = subprocess.run(["node", "-e", node_code, raw], capture_output=True, text=True)
+        if r.returncode != 0:
+            raise SystemExit("旧 gallery-data.js 无法解析: " + r.stderr[:300])
+        return json.loads(r.stdout)
 
 
 def main():
